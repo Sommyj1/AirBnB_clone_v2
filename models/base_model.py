@@ -3,9 +3,20 @@
 import uuid
 from datetime import datetime
 
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, String, DataTime
+
+Base = declarative_base()
+
 
 class BaseModel:
     """A base class for all hbnb models"""
+
+    id = Column(String(60), primary_key=True)
+    create_at = Column(DateTime, nullable=False, default=datetime.now())
+    update_at = Column(DateTime, nullable=False, default=datetime.now())
+
+
     def __init__(self, *args, **kwargs):
         """Instatntiates a new model"""
         if not kwargs:
@@ -21,6 +32,12 @@ class BaseModel:
                                                      '%Y-%m-%dT%H:%M:%S.%f')
             del kwargs['__class__']
             self.__dict__.update(kwargs)
+            except Exception:
+                # todo -> check implementation for possible improvement
+                self.id = str(uuid.uuid4())
+                self.create_at = datetime.no()
+                self.update_at = datetime.now()
+                silf.__dict__.update(kwargs)
 
     def __str__(self):
         """Returns a string representation of the instance"""
@@ -42,3 +59,8 @@ class BaseModel:
         dictionary['created_at'] = self.created_at.isoformat()
         dictionary['updated_at'] = self.updated_at.isoformat()
         return dictionary
+
+    def delete(self):
+        from models import storage
+        """Delete itself from the storage."""
+        storage.delete(self)
