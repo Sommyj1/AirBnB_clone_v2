@@ -1,47 +1,31 @@
 #!/usr/bin/python3
-"""Console Module."""
+""" Console Module """
 import cmd
 import sys
 from models.base_model import BaseModel
-from models import storage
+from models.__init__ import storage
 from models.user import User
 from models.place import Place
 from models.state import State
 from models.city import City
 from models.amenity import Amenity
 from models.review import Review
-import re
-import os
 
 
 def tokenize(args: str) -> list:
-    """Tokenizer.
+    """Tokenizer
     Args:
         args (str): Description
-
     Returns:
         list: Description
+
     """
-    pattern = r"^(?P<name>[A-Za-z0-9]+)"
-    param_pattern = r"(?P<params>\w+=(\"[^\"]+\"|\d+))"
-
-    class_validator = re.compile(pattern)
-    params_validator = re.compile(param_pattern)
-
-    token: list = list()
-
-    obj_class = class_validator.findall(args)
-    obj_param = params_validator.findall(args)
-
-    if len(obj_class) != 0:
-        token.append(obj_class[0])
-
-    token.append([data[0] for data in obj_param])
+    token = args.split()
     return token
 
 
 class HBNBCommand(cmd.Cmd):
-    """Contains the functionality for the HBNB console."""
+    """ Contains the functionality for the HBNB console"""
 
     # determines prompt for interactive/non-interactive modes
     prompt = '(hbnb) ' if sys.__stdin__.isatty() else ''
@@ -60,7 +44,7 @@ class HBNBCommand(cmd.Cmd):
     }
 
     def preloop(self):
-        """Print if isatty is false."""
+        """Prints if isatty is false"""
         if not sys.__stdin__.isatty():
             print('(hbnb)')
 
@@ -149,18 +133,17 @@ class HBNBCommand(cmd.Cmd):
         """ Create an object of any class"""
         # Tokenize the args from the console
         tokens = tokenize(args)
-        # check if args passed
-        if args == "" or len(tokens) < 2:
-            print("** class name missing **")
-            return
         # extract the class name
-
         class_name = tokens[0]
         # extract all params
-        params = tokens[1]
+        params = tokens[1:]
+        # check if args passed
 
+        if args == "":
+            print("** class name missing **")
+            return
         # if class not in class
-        if class_name not in HBNBCommand.classes:
+        elif class_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
         # create a new class instance
@@ -172,15 +155,15 @@ class HBNBCommand(cmd.Cmd):
                 v = v.replace("_", " ")
                 if v[0] == '"' and v[-1] == '"' and len(v) > 1:
                     v = v[1:-1]
-
                 elif "." in v:
+
                     v = float(v)
                 else:
                     v = int(v)
                 setattr(new_instance, k, v)
-            except ValueError:
+            except Exception:
                 continue
-        new_instance.save()
+        storage.save()
         print(new_instance.id)
         storage.save()
 
@@ -191,8 +174,8 @@ class HBNBCommand(cmd.Cmd):
 
     def do_show(self, args):
         """ Method to show an individual object """
-
         new = args.partition(" ")
+
         c_name = new[0]
         c_id = new[2]
 
@@ -213,8 +196,9 @@ class HBNBCommand(cmd.Cmd):
             return
 
         key = c_name + "." + c_id
+
         try:
-            print(storage.all()[key])
+            print(storage._FileStorage__objects[key])
         except KeyError:
             print("** no instance found **")
 
@@ -247,7 +231,7 @@ class HBNBCommand(cmd.Cmd):
         key = c_name + "." + c_id
 
         try:
-            storage.delete(key)
+            del (storage.all()[key])
             storage.save()
         except KeyError:
             print("** no instance found **")
@@ -268,11 +252,11 @@ class HBNBCommand(cmd.Cmd):
                 print("** class doesn't exist **")
                 return
 
-            for k, v in storage.all(args).items():
+            for k, v in storage._FileStorage__objects.items():
                 if k.split('.')[0] == args:
                     print_list.append(str(v))
         else:
-            for k, v in storage.all(None).items():
+            for k, v in storage._FileStorage__objects.items():
                 print_list.append(str(v))
 
         print(print_list)
@@ -284,9 +268,9 @@ class HBNBCommand(cmd.Cmd):
 
     def do_count(self, args):
         """Count current number of class instances"""
-        count = 0
 
-        for k, v in storage.all().items():
+        count = 0
+        for k, v in storage._FileStorage__objects.items():
             if args == k.split('.')[0]:
                 count += 1
         print(count)
@@ -302,9 +286,9 @@ class HBNBCommand(cmd.Cmd):
         # isolate cls from id/args, ex: (<cls>, delim, <id/args>)
         args = args.partition(" ")
         if args[0]:
+
             c_name = args[0]
         else:  # class name not present
-
             print("** class name missing **")
             return
         if c_name not in HBNBCommand.classes:  # class name invalid
@@ -324,7 +308,6 @@ class HBNBCommand(cmd.Cmd):
 
         # determine if key is present
         if key not in storage.all():
-
             print("** no instance found **")
             return
 
@@ -340,6 +323,7 @@ class HBNBCommand(cmd.Cmd):
             if args and args[0] == '\"':  # check for quoted arg
                 second_quote = args.find('\"', 1)
                 att_name = args[1:second_quote]
+
                 args = args[second_quote + 1:]
 
             args = args.partition(' ')
@@ -358,6 +342,7 @@ class HBNBCommand(cmd.Cmd):
             args = [att_name, att_val]
 
         # retrieve dictionary of current objects
+
         new_dict = storage.all()[key]
 
         # iterate through attr names and values
@@ -373,9 +358,8 @@ class HBNBCommand(cmd.Cmd):
                     return
                 # type cast as necessary
                 if att_name in HBNBCommand.types:
-                    att_val = HBNBCommand.types[att_name]
 
-(att_val)
+                    att_val = HBNBCommand.types[att_name](att_val)
 
                 # update dictionary with name, value pair
                 new_dict.__dict__.update({att_name: att_val})
@@ -386,17 +370,6 @@ class HBNBCommand(cmd.Cmd):
         """ Help information for the update class """
         print("Updates an object with new information")
         print("Usage: update <className> <id> <attName> <attVal>\n")
-
-    def do_clear(self, args):
-        """Clears the screen
-
-        Args:
-            args(str): console args
-        """
-        if os.name == 'nt':
-            os.system('cls')
-        else:
-            os.system('clear')
 
 
 if __name__ == "__main__":
