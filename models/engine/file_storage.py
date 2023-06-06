@@ -9,23 +9,18 @@ class FileStorage:
     __objects = {}
 
     def all(self, cls=None):
-        """Returns a dictionary of models currently in storage"""
-        # New temp to store all class
-        new_dict = {}
-        data_dict = self.__objects
-        if cls:
-            for key in data_dict.keys():
-                # remove the . from te key
-
-                key_dot_stripped = key.replace(".", " ")
-                # new key array
-                new_key = key_dot_stripped.split()
-                # if class name is same as name in the key
-                if (cls.__name__ == new_key[0]):
-                    new_dict[key] = self.__objects[key]
-            return new_dict
-        else:
+        """
+        Returns a list of objects of one type of class
+        An optional filtering
+        """
+        if cls is None:
             return FileStorage.__objects
+        else:
+            objs = {}
+            for k, v in FileStorage.__objects.items():
+                if isinstance(v, cls):
+                    objs[k] = v
+            return objs
 
     def new(self, obj):
         """Adds new object to storage dictionary"""
@@ -48,14 +43,13 @@ class FileStorage:
         from models.state import State
         from models.city import City
         from models.amenity import Amenity
-
         from models.review import Review
 
         classes = {
-            'BaseModel': BaseModel, 'User': User, 'Place': Place,
-            'State': State, 'City': City, 'Amenity': Amenity,
-            'Review': Review
-        }
+                    'BaseModel': BaseModel, 'User': User, 'Place': Place,
+                    'State': State, 'City': City, 'Amenity': Amenity,
+                    'Review': Review
+                  }
         try:
             temp = {}
             with open(FileStorage.__file_path, 'r') as f:
@@ -66,22 +60,15 @@ class FileStorage:
             pass
 
     def delete(self, obj=None):
+        """Deletes obj from __objects if it’s inside"""
 
-        """delete an objects
-        Args:
-            obj (None, optional): class object
+        if obj is None:
+            pass
+        else:
+            del FileStorage.__objects[obj.__class__.__name__ + '.' + obj.id]
+
+    def close(self):
         """
-        if obj:
-            # get key
-            key = f"{type(obj).__name__}.{obj.id}"
-            del self.__objects[key]
-
-    @classmethod
-    def set_path(cls, file_path: str):
-        """To change the save file path."""
-        cls.__file_path = file_path
-
-    @classmethod
-    def new_object(cls):
-        """Object storage."""
-        cls.__objects = {}
+        Method for deserializing the JSON file to objects
+        """
+        reload()
